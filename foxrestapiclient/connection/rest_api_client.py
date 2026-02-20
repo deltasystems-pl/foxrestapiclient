@@ -93,11 +93,11 @@ class RestApiClient:
             return RestApiBaseResponse(API_RESPONSE_STATUS_FAIL, errorObj=response_content)
         return RestApiBaseResponse(**json.loads(response_content))
 
-    async def async_api_get_device_info(self) -> :
+    async def async_api_get_device_info(self) -> RestApiDeviceInfoResponse:
         """Get F&F Fox device info.
 
         Get device information such as firmware version, name etc.
-        See  to check what data is returnig from device.
+        See RestApiDeviceInfoResponse to check what data is returnig from device.
         """
         _LOGGER.info("Making call in async_api_get_device_info().")
         response_content = await self.async_make_api_call_get(API_COMMON_GET_DEVICE_INFO)
