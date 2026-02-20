@@ -31,7 +31,7 @@ class STR1S2DeviceTest(unittest.TestCase):
 
     @async_test
     async def test_set_tilt_postion(self):
-        self.assertTrue(await self.device.async_set_tilt_positon(10))
+        self.assertTrue(await self.device.async_set_tilt_position(10))
 
     @async_test
     async def test_set_cover_postion(self):

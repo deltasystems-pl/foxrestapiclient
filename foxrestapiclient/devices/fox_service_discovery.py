@@ -40,7 +40,6 @@ class FoxServiceDiscovery:
 
     def __init__(self) -> None:
         """Construct object."""
-        self._loop = asyncio.get_running_loop()
         self._discovered_devices = []
 
     def get_discovered_devices(self):
@@ -53,7 +52,7 @@ class FoxServiceDiscovery:
                 return True
         return False
 
-    async def async_discover_devices(self, default_tries = 5) -> list:
+    async def async_discover_devices(self, default_tries = 5, interval = 4) -> list:
         """Async discovering devices.
 
         Send request to all devices in local network to discover them.
@@ -61,11 +60,13 @@ class FoxServiceDiscovery:
         Keyword arguments:
         default_tries -- default probes to discover Fox devices. This
             value extends discovering time by following formula:
-            default_tries * 4 s = discovering time in seconds.
+            default_tries * interval s = discovering time in seconds.
+        interval -- delay between probes in seconds.
 
         Return: discovered devices list.
         """
-        transport, protocol = await self._loop.create_datagram_endpoint(
+        loop = asyncio.get_running_loop()
+        transport, protocol = await loop.create_datagram_endpoint(
             lambda: DeviceDiscoverProtocol(self.parse_received_datagram),
             local_addr=('0.0.0.0', 1395),
             reuse_port=True,
@@ -80,7 +81,7 @@ class FoxServiceDiscovery:
                     DEVICE_DISCOVERY_REQUEST_HEADER.encode(),
                     ('255.255.255.255', 1918)
                 )
-                await asyncio.sleep(4)
+                await asyncio.sleep(interval)
         finally:
             transport.close()
         return self._discovered_devices
@@ -88,7 +89,8 @@ class FoxServiceDiscovery:
     def parse_received_datagram(self, data: bytes, addr):
         """Parse UDP message."""
         if len(data) < MIN_DATA_SIZE_TO_PARSE:
-            _LOGGER.warring("Received data size is not enough to parsing it.")
+            _LOGGER.warning("Received data size is not enough to parsing it.")
+            return
         if len(data) < len(DEVICE_DISCOVERY_RESPONSE_HEADER.encode()):
             _LOGGER.error("Parsing UDP response error. Cannot discover F&F Fox device.")
             return

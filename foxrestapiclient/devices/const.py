@@ -22,6 +22,8 @@ API_STR1S2_GET_OPEN_LEVEL = "get_open_level/"
 API_STR1S2_SET_OPEN_LEVEL = "set_open_level/"
 API_STR1S2_GET_TILT_LEVEL = "get_open_louvers_level/"
 API_STR1S2_SET_TILT_LEVEL = "set_open_louvers_level/"
+API_STR1S2_SET_OPEN_LEVELS = "set_open_levels/"
+API_STR1S2_SET_STOP = "set_stop"
 
 #Device model
 DEVICE_MODEL_DIM1S2 = "DIM1S2"

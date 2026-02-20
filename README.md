@@ -20,8 +20,12 @@ All F&F Fox devices supports now only HTTP GET request method. In near future **
 - Turn on/off device
 - Change brightness (DIM1S2, LED2S2, RGBW)
 - Change color in HSV mode (RGBW)
-- Open/Close gate (STR1S2)
+- Open/Close cover (STR1S2)
+- Change cover position (STR1S2)
 - Change tilt position (STR1S2)
+- Set cover and tilt positions in one call (STR1S2)
+- Stop movement (STR1S2)
+- Set cover position with blocking time (STR1S2)
 - Get device information (such as manufacturer, firmaware version etc.)
 
 ### Example - Toggle state of channel
@@ -90,3 +94,62 @@ if __name__ == '__main__':
 ```
 
 More information about how to control device via API methods you can find on wiki [page](https://github.com/fandf92/foxrestapiclient/wiki).
+
+### Example - STR1S2 cover control
+
+```python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import asyncio
+
+from foxrestapiclient.devices.fox_str1s2_device import DeviceData, FoxSTR1S2Device
+from foxrestapiclient.devices.const import DEVICE_TYPE_STR1S2
+
+
+async def main():
+    NAME = None
+    HOST = '_device_IP_address_'
+    API_KEY = '0000'  # The API key is set to 0000 when the type REST API is set to "key not required"
+    UNIQUE_ID = None
+    TYPE = DEVICE_TYPE_STR1S2
+    CHANNELS = None
+
+    cover = FoxSTR1S2Device(DeviceData(
+        name=NAME, host=HOST, api_key=API_KEY, mac_addr=UNIQUE_ID, dev_type=TYPE, channels=CHANNELS))
+
+    # Fetch current positions
+    await cover.async_fetch_update()
+    print(f'Cover position: {cover.get_cover_position()}')
+    print(f'Tilt position: {cover.get_tilt_position()}')
+
+    # Set cover to 50%
+    await cover.async_set_cover_position(50)
+
+    # Set tilt to 30%
+    await cover.async_set_tilt_position(30)
+
+    # Set cover and tilt in one call
+    await cover.async_set_cover_and_tilt_positions(40, 60)
+
+    # Set cover to 100% and block programmers for 5000 ms
+    await cover.async_set_cover_position_with_blocking(100, 5000)
+
+    # Stop movement
+    await cover.async_stop()
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
+    pass
+```
+
+### STR1S2 REST mapping
+
+- `/00/set_open_level/?level=0..100` -> `async_set_cover_position(level)`
+- `/00/set_open_level/?level=100&blocking_time=5000` -> `async_set_cover_position_with_blocking(100, 5000)`
+- `/00/get_open_level/` -> `async_fetch_cover_open_level()`
+- `/00/set_open_louvers_level/?level=0..100` -> `async_set_tilt_position(level)`
+- `/00/get_open_louvers_level/` -> `async_fetch_tilt_open_level()`
+- `/00/set_open_levels/?open_level=0..100&louvers_level=0..100` -> `async_set_cover_and_tilt_positions(open_level, louvers_level)`
+- `/00/set_stop` -> `async_stop()`

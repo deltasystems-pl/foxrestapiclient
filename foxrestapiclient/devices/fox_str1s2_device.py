@@ -11,7 +11,8 @@ from foxrestapiclient.connection.rest_api_client import RestApiClient
 from foxrestapiclient.connection.rest_api_responses import RestApiBaseResponse
 
 from .const import (API_STR1S2_GET_OPEN_LEVEL, API_STR1S2_GET_TILT_LEVEL,
-                    API_STR1S2_SET_OPEN_LEVEL, API_STR1S2_SET_TILT_LEVEL)
+                    API_STR1S2_SET_OPEN_LEVEL, API_STR1S2_SET_OPEN_LEVELS,
+                    API_STR1S2_SET_STOP, API_STR1S2_SET_TILT_LEVEL)
 from .fox_base_device import DeviceData, FoxBaseDevice
 
 
@@ -76,6 +77,17 @@ class FoxSTR1S2Device(FoxBaseDevice):
             """Set tilt open level."""
             return await self.update_open_level(params, API_STR1S2_SET_TILT_LEVEL)
 
+        async def async_set_open_levels(self, params) -> RestApiBaseResponse:
+            """Set cover and tilt open levels."""
+            return await self.update_open_level(params, API_STR1S2_SET_OPEN_LEVELS)
+
+        async def async_set_stop(self) -> RestApiBaseResponse:
+            """Stop movement."""
+            device_response = await self._rest_api_client.async_make_api_call_get(API_STR1S2_SET_STOP)
+            if device_response is None:
+                return RestApiBaseResponse(status=API_RESPONSE_STATUS_FAIL)
+            return RestApiBaseResponse(**json.loads(device_response))
+
     def is_on(self, channel: int = None):
         """Return device state."""
         _LOGGER.warning("This device does not support is on funcionality.")
@@ -99,6 +111,11 @@ class FoxSTR1S2Device(FoxBaseDevice):
         """Get tilt position."""
         return self._tilt_position
 
+    @staticmethod
+    def __is_level_valid(level: int) -> bool:
+        """Validate level range."""
+        return 0 <= level <= 100
+
     async def __async_fetch_open_level(self, callback = None, is_cover = True):
         """Fetch cover open level."""
         if callback is None:
@@ -120,22 +137,28 @@ class FoxSTR1S2Device(FoxBaseDevice):
         """Fetch tilt open level."""
         await self.__async_fetch_open_level(self.__device_api_client.async_get_tilt_level, False)
 
-    async def __async_cover_set_level(self, level = 0, is_cover = True) -> bool:
+    async def __async_cover_set_level(self, level = 0, is_cover = True, blocking_time = None) -> bool:
         """Set cover level.
 
         Keyword arguments:
         level -- cover position must be in range <0,100>
+        blocking_time -- optional blocking time in ms (only for cover open level)
         callback -- function to call
 
         Return: True if success, False otherwise.
         """
-        if level < 0 or level > 100:
+        if not self.__is_level_valid(level):
             _LOGGER.warning(
                 "Level passed to __async_cover_set_level is out of range. Supported <0,100>")
             return False
         params = {
             "level": level
         }
+        if blocking_time is not None and is_cover is True:
+            if blocking_time < 0:
+                _LOGGER.warning("blocking_time passed to __async_cover_set_level is below zero.")
+                return False
+            params.update({"blocking_time": blocking_time})
         if is_cover is True:
             device_response = await self.__device_api_client.async_set_open_level(params)
         else:
@@ -169,6 +192,17 @@ class FoxSTR1S2Device(FoxBaseDevice):
         Return: True if success, False otherwise."""
         return await self.__async_cover_set_level(position)
 
+    async def async_set_cover_position_with_blocking(self, position, blocking_time) -> bool:
+        """Set cover position with blocking time.
+
+        Keyword arguments:
+        position -- position to set up from 0 to 100%
+        blocking_time -- blocking time in ms
+
+        Return: True if success, False otherwise.
+        """
+        return await self.__async_cover_set_level(position, True, blocking_time)
+
     async def async_set_tilt_positon(self, position) -> bool:
         """Set tilt position.
 
@@ -177,7 +211,54 @@ class FoxSTR1S2Device(FoxBaseDevice):
 
         Return: True if success, False otherwise.
         """
+        return await self.async_set_tilt_position(position)
+
+    async def async_set_tilt_position(self, position) -> bool:
+        """Set tilt position.
+
+        Keyword arguments:
+        position -- position to set up from 0 to 100%
+
+        Return: True if success, False otherwise.
+        """
         return await self.__async_cover_set_level(position, False)
+
+    async def async_set_cover_and_tilt_positions(self, cover_position, tilt_position) -> bool:
+        """Set cover and tilt positions in single call.
+
+        Keyword arguments:
+        cover_position -- cover position in range <0,100>
+        tilt_position -- tilt position in range <0,100>
+
+        Return: True if success, False otherwise.
+        """
+        if not self.__is_level_valid(cover_position):
+            _LOGGER.warning(
+                "cover_position passed to async_set_cover_and_tilt_positions is out of range. Supported <0,100>")
+            return False
+        if not self.__is_level_valid(tilt_position):
+            _LOGGER.warning(
+                "tilt_position passed to async_set_cover_and_tilt_positions is out of range. Supported <0,100>")
+            return False
+        params = {
+            "open_level": cover_position,
+            "louvers_level": tilt_position
+        }
+        device_response = await self.__device_api_client.async_set_open_levels(params)
+        if device_response.status != API_RESPONSE_STATUS_OK:
+            self._state = False
+            return False
+        self._state = True
+        return True
+
+    async def async_stop(self) -> bool:
+        """Stop cover movement."""
+        device_response = await self.__device_api_client.async_set_stop()
+        if device_response.status != API_RESPONSE_STATUS_OK:
+            self._state = False
+            return False
+        self._state = True
+        return True
 
     async def async_set_device_state(self, is_on, channel = None):
         """Overriden method from base device."""
