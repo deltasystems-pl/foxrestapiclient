@@ -14,10 +14,10 @@ setup(
     description="Connect to F&F Fox devices via RestAPI.",
     long_description=README,
     long_description_content_type="text/markdown",
-    author="F&F Filipowski Sp. j.",
-    author_email="t.waclawiak@fif.com.pl",
+    author="deltasystems-pl",
+    author_email="",
     license="MIT",
-    url="https://github.com/fandf92/foxrestapiclient",
+    url="https://github.com/deltasystems-pl/foxrestapiclient",
     packages=find_packages(exclude=("test")),
     include_package_data=True,
     install_requires=[
