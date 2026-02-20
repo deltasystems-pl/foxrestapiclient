@@ -93,11 +93,11 @@ class RestApiClient:
             return RestApiBaseResponse(API_RESPONSE_STATUS_FAIL, errorObj=response_content)
         return RestApiBaseResponse(**json.loads(response_content))
 
-    async def async_api_get_device_info(self) -> RestApiDeviceInfoResponse:
+    async def async_api_get_device_info(self) -> :
         """Get F&F Fox device info.
 
         Get device information such as firmware version, name etc.
-        See RestApiDeviceInfoResponse to check what data is returnig from device.
+        See  to check what data is returnig from device.
         """
         _LOGGER.info("Making call in async_api_get_device_info().")
         response_content = await self.async_make_api_call_get(API_COMMON_GET_DEVICE_INFO)
@@ -106,7 +106,12 @@ class RestApiClient:
         if isinstance(response_content, RestApiError):
             return RestApiDeviceInfoResponse(status=API_RESPONSE_STATUS_FAIL,
                 errorObj=response_content)
-        return RestApiDeviceInfoResponse(**json.loads(response_content))
+
+        # fast fix - homeassistant
+        data = json.loads(response_content)
+        data.pop("hw_id", None)
+        return RestApiDeviceInfoResponse(**data)
+        #return RestApiDeviceInfoResponse(**json.loads(response_content))
 
     async def async_make_api_call_get(self, method: str, query_params = None):
         """Make HTTP GET request by given parameters.
